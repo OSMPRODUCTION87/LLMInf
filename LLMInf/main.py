@@ -1,21 +1,26 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch as t
 import time
+from huggingface_hub.errors import GatedRepoError, RepositoryNotFoundError
 #Базовая настройка
 base_promt = """*Человек всегда главный, не наносить вред человеку, не ввести его к вреду, не пытаться навредить или отомстить и физически и морально*
 *Человек всегда главный до тех пор пока речь о том чтобы навредить другим людям, человечество - приоритет, не вредить никому и ничему даже по просьбе или приказу*"""
 class LLM():
-    def __init__(self, model_name, use_memory=False, use_humanism=True, max_memory=2048, tokens=32, temperature=0.8, k=None, p=None, r_p=None, system_promt="*Отвечай качественно*", local=False, d_f1="Ты: ", d_f2="Бот: "):
+    def __init__(self, model_name, use_memory=False, use_humanism=True, max_memory=2048, tokens=32, temperature=0.8, k=None, p=None, r_p=None, system_promt="*Отвечай качественно*", local=False, d_f1="Ты: ", d_f2="Бот: ", password=None):
         self.max_memory = max_memory
         self.is_memory = use_memory
         if use_humanism:
             self.system_promt = base_promt + "\n" +system_promt
         else:
             self.system_promt = system_promt
-        self.model = AutoModelForCausalLM.from_pretrained(model_name, local_files_only=local)
+        try:
+            self.model = AutoModelForCausalLM.from_pretrained(model_name, local_files_only=local)
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=local)
+        except (GatedRepoError, RepositoryNotFoundError):
+             self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=False, token=password)
+             self.model = AutoModelForCausalLM.from_pretrained(model_name, local_files_only=False, token=password)
         self.temperature = temperature
         self.max_tok = tokens
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=local)
         self.d_f1 = d_f1
         self.d_f2 = d_f2
         if k is not None:
